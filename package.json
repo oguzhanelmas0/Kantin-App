@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",
-    "better-sqlite3": "^12.8.0",
+    "better-sqlite3": "^9.6.0",
     "lucide-react": "^1.7.0",
     "react-router-dom": "^7.13.2",
     "tailwindcss": "^4.2.2"
@@ -27,7 +27,7 @@
     "@electron-toolkit/eslint-config": "^2.1.0",
     "@electron-toolkit/eslint-config-prettier": "^3.0.0",
     "@vitejs/plugin-react": "^5.1.1",
-    "electron": "^33.4.11",
+    "electron": "^22.3.27",
     "electron-builder": "^26.0.12",
     "electron-vite": "^5.0.0",
     "eslint": "^9.39.1",
