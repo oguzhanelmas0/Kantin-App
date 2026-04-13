@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, TrendingUp, ShoppingBag, Wallet, Award } from 'lucide-react'
+import { Calendar, TrendingUp, ShoppingBag, Wallet, Award, TrendingDown, Users } from 'lucide-react'
 
 function today() {
   return new Date().toISOString().split('T')[0]
@@ -60,8 +60,9 @@ export default function Reports() {
     ? [
         { icon: ShoppingBag, label: 'Toplam Satış', value: data.summary.total_sales, color: '#3b82f6', bg: '#eff6ff', unit: '' },
         { icon: TrendingUp, label: 'Toplam Ciro', value: data.summary.total_revenue.toFixed(2), color: '#16a34a', bg: '#f0fdf4', unit: ' ₺' },
-        { icon: Wallet, label: 'Nakit', value: data.summary.nakit_revenue.toFixed(2), color: '#0891b2', bg: '#ecfeff', unit: ' ₺' },
-        { icon: Wallet, label: 'Hesaptan', value: data.summary.hesap_revenue.toFixed(2), color: '#7c3aed', bg: '#f5f3ff', unit: ' ₺' },
+        { icon: TrendingUp, label: 'Net Kar', value: (data.netProfit || 0).toFixed(2), color: '#0891b2', bg: '#ecfeff', unit: ' ₺' },
+        { icon: Wallet, label: 'Nakit', value: data.summary.nakit_revenue.toFixed(2), color: '#7c3aed', bg: '#f5f3ff', unit: ' ₺' },
+        { icon: Wallet, label: 'Hesaptan', value: data.summary.hesap_revenue.toFixed(2), color: '#d97706', bg: '#fffbeb', unit: ' ₺' },
         { icon: TrendingUp, label: 'Kantin Toplam', value: data.kantinBalance.toFixed(2), color: '#dc2626', bg: '#fef2f2', unit: ' ₺' }
       ]
     : []
@@ -82,21 +83,17 @@ export default function Reports() {
       >
         <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, flex: 1 }}>Raporlar</h2>
 
-        {/* Preset buttons */}
         <div style={{ display: 'flex', gap: 6 }}>
           {PRESETS.map((p, i) => (
             <button
               key={i}
               onClick={() => { setPreset(i); setUseCustom(false) }}
               style={{
-                padding: '6px 14px',
-                borderRadius: 7,
-                border: '1px solid',
+                padding: '6px 14px', borderRadius: 7, border: '1px solid',
                 borderColor: !useCustom && preset === i ? '#2563eb' : '#e5e7eb',
                 background: !useCustom && preset === i ? '#2563eb' : 'white',
                 color: !useCustom && preset === i ? 'white' : '#374151',
-                cursor: 'pointer',
-                fontSize: 13,
+                cursor: 'pointer', fontSize: 13,
                 fontWeight: !useCustom && preset === i ? 600 : 400
               }}
             >
@@ -105,7 +102,6 @@ export default function Reports() {
           ))}
         </div>
 
-        {/* Custom date */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Calendar size={14} color="#64748b" />
           <input
@@ -131,13 +127,7 @@ export default function Reports() {
             {statCards.map(({ icon: Icon, label, value, color, bg, unit }) => (
               <div
                 key={label}
-                style={{
-                  flex: '1 1 160px',
-                  background: 'white',
-                  borderRadius: 10,
-                  padding: 16,
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.06)'
-                }}
+                style={{ flex: '1 1 150px', background: 'white', borderRadius: 10, padding: 16, boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                   <div style={{ width: 32, height: 32, borderRadius: 8, background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -153,6 +143,34 @@ export default function Reports() {
           </div>
         )}
 
+        {/* Hesap Özeti */}
+        {data && data.accountsSummary && (
+          <div style={{ background: 'white', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
+            <div style={{ padding: '14px 16px', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Users size={16} color="#2563eb" />
+              <span style={{ fontWeight: 700, fontSize: 15 }}>Hesap Özeti (Tüm Zamanlar)</span>
+            </div>
+            <div style={{ display: 'flex', gap: 0 }}>
+              {/* Toplam Bakiye */}
+              <div style={{ flex: 1, padding: '18px 20px', borderRight: '1px solid #f1f5f9' }}>
+                <div style={{ fontSize: 12, color: '#64748b', fontWeight: 500, marginBottom: 6 }}>Toplam Hesap Bakiyesi</div>
+                <div style={{ fontSize: 26, fontWeight: 800, color: '#16a34a' }}>
+                  +{data.accountsSummary.totalCredit.toFixed(2)} ₺
+                </div>
+                <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>Pozitif bakiyeli hesapların toplamı</div>
+              </div>
+              {/* Toplam Borç */}
+              <div style={{ flex: 1, padding: '18px 20px' }}>
+                <div style={{ fontSize: 12, color: '#64748b', fontWeight: 500, marginBottom: 6 }}>Toplam Hesap Borcu</div>
+                <div style={{ fontSize: 26, fontWeight: 800, color: '#ef4444' }}>
+                  -{data.accountsSummary.totalDebt.toFixed(2)} ₺
+                </div>
+                <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 4 }}>Negatif bakiyeli hesapların toplamı</div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Top products */}
         {data && data.topProducts.length > 0 && (
           <div style={{ background: 'white', borderRadius: 10, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.06)' }}>
@@ -164,26 +182,17 @@ export default function Reports() {
               <div
                 key={p.product_name}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  padding: '11px 16px',
+                  display: 'flex', alignItems: 'center', padding: '11px 16px',
                   borderBottom: i < data.topProducts.length - 1 ? '1px solid #f8fafc' : 'none'
                 }}
               >
                 <div
                   style={{
-                    width: 24,
-                    height: 24,
-                    borderRadius: '50%',
+                    width: 24, height: 24, borderRadius: '50%',
                     background: i === 0 ? '#fef3c7' : '#f1f5f9',
                     color: i === 0 ? '#d97706' : '#64748b',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 12,
-                    fontWeight: 700,
-                    marginRight: 12,
-                    flexShrink: 0
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 12, fontWeight: 700, marginRight: 12, flexShrink: 0
                   }}
                 >
                   {i + 1}
@@ -210,15 +219,10 @@ export default function Reports() {
                   <button
                     onClick={() => toggleSale(sale.id)}
                     style={{
-                      width: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      padding: '12px 16px',
-                      border: 'none',
+                      width: '100%', display: 'flex', alignItems: 'center',
+                      padding: '12px 16px', border: 'none',
                       borderBottom: expandedSale !== sale.id && idx < data.sales.length - 1 ? '1px solid #f8fafc' : 'none',
-                      background: 'white',
-                      cursor: 'pointer',
-                      textAlign: 'left'
+                      background: 'white', cursor: 'pointer', textAlign: 'left'
                     }}
                     onMouseEnter={(e) => (e.currentTarget.style.background = '#f8fafc')}
                     onMouseLeave={(e) => (e.currentTarget.style.background = 'white')}
@@ -231,10 +235,7 @@ export default function Reports() {
                     </div>
                     <div
                       style={{
-                        padding: '3px 10px',
-                        borderRadius: 20,
-                        fontSize: 12,
-                        fontWeight: 600,
+                        padding: '3px 10px', borderRadius: 20, fontSize: 12, fontWeight: 600,
                         background: sale.payment_type === 'nakit' ? '#ecfdf5' : '#f5f3ff',
                         color: sale.payment_type === 'nakit' ? '#16a34a' : '#7c3aed',
                         marginRight: 12
@@ -245,7 +246,6 @@ export default function Reports() {
                     <div style={{ fontWeight: 700, fontSize: 15 }}>{sale.total.toFixed(2)} ₺</div>
                   </button>
 
-                  {/* Expanded items */}
                   {expandedSale === sale.id && saleItems[sale.id] && (
                     <div style={{ background: '#f8fafc', borderBottom: '1px solid #f1f5f9', padding: '8px 16px 12px 52px' }}>
                       {saleItems[sale.id].map((item) => (

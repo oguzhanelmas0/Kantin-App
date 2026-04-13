@@ -13,15 +13,25 @@ import {
   makeSale,
   getSaleItems,
   getSalesReport,
-  resetDatabase
+  resetDatabase,
+  getAdminPassword,
+  setAdminPassword
 } from './database'
 
 export function registerIpcHandlers() {
+  // Admin
+  ipcMain.handle('admin:getPassword', () => getAdminPassword())
+  ipcMain.handle('admin:setPassword', (_, password) => setAdminPassword(password))
+
   // Products
   ipcMain.handle('products:getAll', () => getAllProducts())
   ipcMain.handle('products:getByBarcode', (_, barcode) => getProductByBarcode(barcode))
-  ipcMain.handle('products:add', (_, { barcode, name, price }) => addProduct(barcode, name, price))
-  ipcMain.handle('products:update', (_, { id, name, price }) => updateProduct(id, name, price))
+  ipcMain.handle('products:add', (_, { barcode, name, price, purchasePrice, stock }) =>
+    addProduct(barcode, name, price, purchasePrice, stock)
+  )
+  ipcMain.handle('products:update', (_, { id, name, price, purchasePrice, stock }) =>
+    updateProduct(id, name, price, purchasePrice, stock)
+  )
   ipcMain.handle('products:delete', (_, id) => deleteProduct(id))
 
   // Accounts

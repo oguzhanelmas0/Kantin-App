@@ -72,7 +72,7 @@ export default function POS() {
     await window.api.sales.make({ items: cart, total, paymentType: 'nakit', accountId: null })
     setCart([])
     setSaleSuccess({ type: 'nakit', total })
-    setTimeout(() => setSaleSuccess(null), 2000)
+    setTimeout(() => setSaleSuccess(null), 700)
     inputRef.current?.focus()
   }
 
@@ -81,7 +81,7 @@ export default function POS() {
     await window.api.sales.make({ items: cart, total, paymentType: 'hesap', accountId: account.id })
     setCart([])
     setSaleSuccess({ type: 'hesap', total, accountName: account.name })
-    setTimeout(() => setSaleSuccess(null), 2500)
+    setTimeout(() => setSaleSuccess(null), 700)
     inputRef.current?.focus()
   }
 

@@ -17,6 +17,11 @@ function getDb() {
 
 function initSchema() {
   db.exec(`
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    );
+
     CREATE TABLE IF NOT EXISTS products (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       barcode TEXT UNIQUE NOT NULL,
@@ -67,6 +72,29 @@ function initSchema() {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
   `)
+
+  // Migrations — ALTER TABLE hata vermez, try-catch ile geç
+  const migrations = [
+    'ALTER TABLE products ADD COLUMN purchase_price REAL DEFAULT 0',
+    'ALTER TABLE products ADD COLUMN stock INTEGER DEFAULT 0',
+    'ALTER TABLE sale_items ADD COLUMN product_purchase_price REAL DEFAULT 0'
+  ]
+  for (const sql of migrations) {
+    try { db.exec(sql) } catch (_) { /* kolon zaten var */ }
+  }
+}
+
+// ── Settings ──────────────────────────────────────────────────────────────────
+
+export function getAdminPassword() {
+  const row = getDb().prepare('SELECT value FROM settings WHERE key = ?').get('admin_password')
+  return row ? row.value : null
+}
+
+export function setAdminPassword(password) {
+  getDb()
+    .prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)')
+    .run('admin_password', password)
 }
 
 // ── Products ──────────────────────────────────────────────────────────────────
@@ -79,18 +107,20 @@ export function getProductByBarcode(barcode) {
   return getDb().prepare('SELECT * FROM products WHERE barcode = ?').get(barcode) || null
 }
 
-export function addProduct(barcode, name, price) {
-  return getDb()
-    .prepare('INSERT INTO products (barcode, name, price) VALUES (?, ?, ?)')
-    .run(barcode, name, price)
-}
-
-export function updateProduct(id, name, price) {
+export function addProduct(barcode, name, price, purchasePrice, stock) {
   return getDb()
     .prepare(
-      'UPDATE products SET name = ?, price = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+      'INSERT INTO products (barcode, name, price, purchase_price, stock) VALUES (?, ?, ?, ?, ?)'
     )
-    .run(name, price, id)
+    .run(barcode, name, price, purchasePrice || 0, stock || 0)
+}
+
+export function updateProduct(id, name, price, purchasePrice, stock) {
+  return getDb()
+    .prepare(
+      'UPDATE products SET name = ?, price = ?, purchase_price = ?, stock = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?'
+    )
+    .run(name, price, purchasePrice || 0, stock || 0, id)
 }
 
 export function deleteProduct(id) {
@@ -149,11 +179,20 @@ export function makeSale(items, total, paymentType, accountId) {
     const saleId = sale.lastInsertRowid
 
     for (const item of items) {
+      // Güncel alış fiyatını ürün tablosundan al
+      const product = database.prepare('SELECT purchase_price FROM products WHERE id = ?').get(item.id)
+      const purchasePrice = product ? (product.purchase_price || 0) : 0
+
       database
         .prepare(
-          'INSERT INTO sale_items (sale_id, product_id, product_name, product_price, quantity) VALUES (?, ?, ?, ?, ?)'
+          'INSERT INTO sale_items (sale_id, product_id, product_name, product_price, product_purchase_price, quantity) VALUES (?, ?, ?, ?, ?, ?)'
         )
-        .run(saleId, item.id, item.name, item.price, item.quantity)
+        .run(saleId, item.id, item.name, item.price, purchasePrice, item.quantity)
+
+      // Stok düş
+      database
+        .prepare('UPDATE products SET stock = MAX(0, stock - ?) WHERE id = ?')
+        .run(item.quantity, item.id)
     }
 
     database
@@ -207,6 +246,15 @@ export function getSalesReport(startDate, endDate) {
     )
     .get(startDate, endDate)
 
+  const netProfitRow = database
+    .prepare(
+      `SELECT COALESCE(SUM((si.product_price - si.product_purchase_price) * si.quantity), 0) as net_profit
+       FROM sale_items si
+       JOIN sales s ON si.sale_id = s.id
+       WHERE date(s.created_at) >= date(?) AND date(s.created_at) <= date(?)`
+    )
+    .get(startDate, endDate)
+
   const topProducts = database
     .prepare(
       `SELECT
@@ -226,15 +274,29 @@ export function getSalesReport(startDate, endDate) {
     .prepare('SELECT COALESCE(SUM(amount), 0) as total FROM kantin_balance_log')
     .get()
 
+  const accountsRow = database
+    .prepare(
+      `SELECT
+         COALESCE(SUM(CASE WHEN balance > 0 THEN balance ELSE 0 END), 0) as total_credit,
+         ABS(COALESCE(SUM(CASE WHEN balance < 0 THEN balance ELSE 0 END), 0)) as total_debt
+       FROM accounts`
+    )
+    .get()
+
   return {
     sales,
     summary,
     topProducts,
-    kantinBalance: balanceRow.total
+    kantinBalance: balanceRow.total,
+    netProfit: netProfitRow.net_profit,
+    accountsSummary: {
+      totalCredit: accountsRow.total_credit,
+      totalDebt: accountsRow.total_debt
+    }
   }
 }
 
-// ── Settings ──────────────────────────────────────────────────────────────────
+// ── Reset ─────────────────────────────────────────────────────────────────────
 
 export function resetDatabase() {
   const database = getDb()
@@ -247,6 +309,7 @@ export function resetDatabase() {
       DELETE FROM accounts;
       DELETE FROM products;
     `)
+    // settings (admin şifresi) silinmez
   })
   doReset()
 }

@@ -1,6 +1,10 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 const api = {
+  admin: {
+    getPassword: () => ipcRenderer.invoke('admin:getPassword'),
+    setPassword: (password) => ipcRenderer.invoke('admin:setPassword', password)
+  },
   products: {
     getAll: () => ipcRenderer.invoke('products:getAll'),
     getByBarcode: (barcode) => ipcRenderer.invoke('products:getByBarcode', barcode),
